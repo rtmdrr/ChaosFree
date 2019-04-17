@@ -1,7 +1,10 @@
 import torch.nn as nn
 from torch.autograd import Variable
-
+import torch as T
 from CFN.nn import CFN
+from BNCFN.nn import BNCFN
+from BNLSTM import bnlstm as BNLSTM
+
 
 
 class RNNModel(nn.Module):
@@ -15,6 +18,10 @@ class RNNModel(nn.Module):
             self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout)
         elif rnn_type == 'CFN':
             self.rnn = CFN(ninp, nhid, nlayers, dropout=dropout)
+        elif rnn_type == 'BNLSTM':
+            self.rnn = BNLSTM.BNLSTM(ninp, nhid, nlayers)
+        elif rnn_type == 'BNCFN':
+            self.rnn = BNCFN(ninp, nhid, nlayers, dropout=dropout)
         else:
             try:
                 nonlinearity = {'RNN_TANH': 'tanh', 'RNN_RELU': 'relu'}[rnn_type]
@@ -22,6 +29,7 @@ class RNNModel(nn.Module):
                 raise ValueError( """An invalid option for `--model` was supplied,
                                  options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']""")
             self.rnn = nn.RNN(ninp, nhid, nlayers, nonlinearity=nonlinearity, dropout=dropout)
+
         self.decoder = nn.Linear(nhid, ntoken)
 
         # Optionally tie weights as in:
@@ -56,7 +64,7 @@ class RNNModel(nn.Module):
 
     def init_hidden(self, bsz):
         weight = next(self.parameters()).data
-        if self.rnn_type == 'LSTM':
+        if self.rnn_type == 'LSTM' or self.rnn_type == 'BNLSTM':
             return (Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()),
                     Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()))
         else:

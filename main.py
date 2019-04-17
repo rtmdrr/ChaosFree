@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Lang
 parser.add_argument('--data', type=str, default='./data/penn',
           help='location of the data corpus')
 parser.add_argument('--model', type=str, default='CFN',
-          help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, CFN)')
+          help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, CFN, BNLSTM, BNCFN)')
 parser.add_argument('--emsize', type=int, default=200,
           help='size of word embeddings')
 parser.add_argument('--nhid', type=int, default=200,
@@ -31,7 +31,7 @@ parser.add_argument('--epochs', type=int, default=40,
           help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=20, metavar='N',
           help='batch size')
-parser.add_argument('--bptt', type=int, default=35,
+parser.add_argument('--bptt', type=int, default=20,
           help='sequence length')
 parser.add_argument('--dropout', type=float, default=0.5,
           help='dropout applied to layers (0 = no dropout)')
@@ -72,6 +72,7 @@ corpus = data.Corpus(args.data)
 # dependence of e. g. 'g' on 'f' can not be learned, but allows more efficient
 # batch processing.
 
+
 def batchify(data, bsz):
   # Work out how cleanly we can divide the dataset into bsz parts.
   nbatch = data.size(0) // bsz
@@ -102,6 +103,7 @@ criterion = nn.CrossEntropyLoss()
 ###############################################################################
 # Training code
 ###############################################################################
+
 
 def repackage_hidden(h):
   """Wraps hidden states in new Variables, to detach them from their history."""
@@ -149,6 +151,7 @@ def evaluate(data_source):
     total_loss += len(data) * criterion(output_flat, targets).data
     hidden = repackage_hidden(hidden)
   return total_loss / len(data_source)
+
 
 if args.optim == 'adam':
   optimizer = optim.Adam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98]) # 0.0001
