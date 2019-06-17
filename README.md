@@ -1,4 +1,4 @@
-# Chaos Free Project
+# Deep Learning on Computational Accelerators Project - Part 1
 
 This code implements a Word-level language modeling multi-layer RNN of the following configurations: RNN_TANH, RNN_RELU, LSTM, GRU, CFN, BNLSTM, BNCFN.
 By default, the training script uses the PTB dataset, provided. 
