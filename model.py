@@ -1,10 +1,8 @@
 import torch.nn as nn
 from torch.autograd import Variable
-import torch as T
 from CFN.nn import CFN
-from BNCFN.nn import BNCFN
-from BNLSTM import bnlstm as BNLSTM
-
+from BNLSTM import bnlstm
+from BNCFN import bncfn
 
 
 class RNNModel(nn.Module):
@@ -19,9 +17,11 @@ class RNNModel(nn.Module):
         elif rnn_type == 'CFN':
             self.rnn = CFN(ninp, nhid, nlayers, dropout=dropout)
         elif rnn_type == 'BNLSTM':
-            self.rnn = BNLSTM.BNLSTM(ninp, nhid, nlayers)
+            self.rnn = bnlstm.BNLSTM(input_size=ninp, hidden_size=nhid, batch_first=False, bidirectional=False, dropout=dropout)
         elif rnn_type == 'BNCFN':
-            self.rnn = BNCFN(ninp, nhid, nlayers, dropout=dropout)
+            self.rnn = bncfn.BNCFN(input_size=ninp, hidden_size=nhid, batch_first=False, bidirectional=False,
+                                     dropout=dropout)
+
         else:
             try:
                 nonlinearity = {'RNN_TANH': 'tanh', 'RNN_RELU': 'relu'}[rnn_type]
