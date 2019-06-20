@@ -5,9 +5,9 @@ By default, the training script uses the PTB dataset, provided.
 The trained model can then be used by the generate script to generate new text.
 
 ```
-# Train a subLSTM on PTB with CUDA, reaching perplexity of 136.90 (15 epochs)
+# Train
 python main.py --cuda --emsize 650 --nhid 650 --dropout 0.5 --epochs 100 --lr 0.001 --optim adam --model GRU
-# Generate samples from the trained subLSTM model.
+# Generate samples from the trained model.
 python generate.py
 ```
 
