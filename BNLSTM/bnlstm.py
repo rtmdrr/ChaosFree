@@ -1,22 +1,21 @@
 import torch
 from torch import nn
 
-
 class BNLSTMCell(nn.Module):
     def __init__(self, input_size, hidden_size):
-        super(BNLSTMCell, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.weight_ih = nn.Parameter(torch.Tensor(input_size, 4 * hidden_size))
-        self.weight_hh = nn.Parameter(torch.Tensor(hidden_size, 4 * hidden_size))
-        self.bias = nn.Parameter(torch.zeros(4 * hidden_size))
+            super(BNLSTMCell, self).__init__()
+            self.input_size = input_size
+            self.hidden_size = hidden_size
+            self.weight_ih = nn.Parameter(torch.Tensor(input_size, 4 * hidden_size))
+            self.weight_hh = nn.Parameter(torch.Tensor(hidden_size, 4 * hidden_size))
+            self.bias = nn.Parameter(torch.zeros(4 * hidden_size))
 
-        self.bn_ih = nn.BatchNorm1d(4 * self.hidden_size, affine=False)
-        self.bn_hh = nn.BatchNorm1d(4 * self.hidden_size, affine=False)
-        self.bn_c = nn.BatchNorm1d(self.hidden_size)
+            self.bn_ih = nn.BatchNorm1d(4 * self.hidden_size, affine=False)
+            self.bn_hh = nn.BatchNorm1d(4 * self.hidden_size, affine=False)
+            self.bn_c = nn.BatchNorm1d(self.hidden_size)
 
-        self.reset_parameters()
-
+            self.reset_parameters()
+    
     def reset_parameters(self):
         nn.init.orthogonal_(self.weight_ih.data)
         nn.init.orthogonal_(self.weight_hh.data[:, :self.hidden_size])
@@ -24,6 +23,7 @@ class BNLSTMCell(nn.Module):
         nn.init.orthogonal_(self.weight_hh.data[:, 2 * self.hidden_size:3 * self.hidden_size])
         nn.init.eye_(self.weight_hh.data[:, 3 * self.hidden_size:])
         self.weight_hh.data[:, 3 * self.hidden_size:] *= 0.95
+        
 
     def forward(self, input, hx):
         h, c = hx
@@ -40,12 +40,13 @@ class BNLSTMCell(nn.Module):
 
 
 class BNLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, batch_first=False, bidirectional=False):
+    def __init__(self, input_size, hidden_size, batch_first=False, bidirectional=False, dropout=False):
         super(BNLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.bidirectional = bidirectional
+        self.dropout = dropout
 
         self.lstm_f = BNLSTMCell(input_size, hidden_size)
         if bidirectional:
@@ -54,36 +55,34 @@ class BNLSTM(nn.Module):
         self.c0 = nn.Parameter(torch.Tensor(2 if self.bidirectional else 1, 1, self.hidden_size))
         nn.init.normal_(self.h0, mean=0, std=0.1)
         nn.init.normal_(self.c0, mean=0, std=0.1)
-
+    
     def forward(self, input, hx=None):
         if not self.batch_first:
             input = input.transpose(0, 1)
         batch_size, seq_len, dim = input.size()
-        if hx is not None:
-            init_state = hx
-        else:
-            init_state = (self.h0.repeat(1, batch_size, 1), self.c0.repeat(1, batch_size, 1))
-            hx = (init_state[0][0], init_state[1][0])
-
+        if hx: init_state = hx
+        else: init_state = (self.h0.repeat(1, batch_size, 1), self.c0.repeat(1, batch_size, 1))
+        
         hiddens_f = []
         final_hx_f = None
+        hx = (init_state[0][0], init_state[1][0])
         for i in range(seq_len):
             hx = self.lstm_f(input[:, i, :], hx)
             hiddens_f.append(hx[0])
             final_hx_f = hx
         hiddens_f = torch.stack(hiddens_f, 1)
-
+        
         if self.bidirectional:
             hiddens_b = []
             final_hx_b = None
             hx = (init_state[0][1], init_state[1][1])
-            for i in range(seq_len - 1, -1, -1):
+            for i in range(seq_len-1, -1, -1):
                 hx = self.lstm_b(input[:, i, :], hx)
                 hiddens_b.append(hx[0])
                 final_hx_b = hx
             hiddens_b.reverse()
             hiddens_b = torch.stack(hiddens_b, 1)
-
+        
         if self.bidirectional:
             hiddens = torch.cat([hiddens_f, hiddens_b], -1)
             hx = (torch.stack([final_hx_f[0], final_hx_b[0]], 0), torch.stack([final_hx_f[1], final_hx_b[1]], 0))
